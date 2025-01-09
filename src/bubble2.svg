@@ -1,3 +1,16 @@
-<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="44" cy="44" r="40" vector-effect="non-scaling-stroke" stroke="black" stroke-width="8" stroke-linejoin="round" stroke-dasharray="2 8"/>
+<svg width="172" height="172" viewBox="0 0 172 172" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M124 84C124 104.987 106.987 122 86 122C65.0132 122 48 104.987 48 84C48 63.0132 65.0132 46 86 46C106.987 46 124 63.0132 124 84Z" fill="url(#paint0_radial_3_253)"/>
+<path opacity="0.16" fill-rule="evenodd" clip-rule="evenodd" d="M79.6437 106.036C79.5397 102.044 83.4425 99.0957 87.793 98.9706C92.1436 98.8456 96.1941 101.565 96.2981 105.557C96.3819 108.771 93.8674 111.309 90.6131 112.241L86.2223 112.491C82.6711 111.902 79.7321 109.428 79.6437 106.036Z" fill="black"/>
+<path opacity="0.16" fill-rule="evenodd" clip-rule="evenodd" d="M93.3357 62.6632C93.3298 66.6563 89.3473 69.4959 84.9949 69.5012C80.6426 69.5065 76.6685 66.6764 76.6744 62.6834C76.6791 59.4679 79.2625 57.0004 82.5412 56.1585L86.9372 56.0291C90.4708 56.716 93.3407 59.2696 93.3357 62.6632Z" fill="black"/>
+<path opacity="0.16" fill-rule="evenodd" clip-rule="evenodd" d="M64.2783 88.8443C67.6247 86.6658 72.1799 88.4474 74.5642 92.0885C76.9485 95.7297 76.7522 100.605 73.4058 102.783C70.711 104.537 67.2324 103.724 64.7348 101.439L62.2225 97.8291C60.8654 94.4949 61.4342 90.6958 64.2783 88.8443Z" fill="black"/>
+<path opacity="0.16" fill-rule="evenodd" clip-rule="evenodd" d="M108.647 79.627C105.242 81.7125 100.737 79.8062 98.454 76.1008C96.1708 72.3954 96.5013 67.5278 99.9064 65.4423C102.648 63.7628 106.103 64.6719 108.537 67.0246L110.949 70.7022C112.214 74.0724 111.541 77.8545 108.647 79.627Z" fill="black"/>
+<path opacity="0.16" fill-rule="evenodd" clip-rule="evenodd" d="M73.5934 67.6139C77.0516 69.6101 77.5272 74.4782 75.3615 78.2534C73.1958 82.0287 68.761 84.0623 65.3028 82.0661C62.518 80.4586 61.6673 76.9889 62.5725 73.7271L64.6523 69.852C67.0097 67.1316 70.6542 65.9173 73.5934 67.6139Z" fill="black"/>
+<path opacity="0.16" fill-rule="evenodd" clip-rule="evenodd" d="M98.8142 100.633C95.4122 98.5424 95.0708 93.6631 97.3396 89.9489C99.6084 86.2346 104.097 84.3239 107.499 86.4145C110.239 88.098 110.994 91.5899 109.999 94.8255L107.814 98.6418C105.382 101.296 101.706 102.41 98.8142 100.633Z" fill="black"/>
+<circle cx="86" cy="86" r="82"  vector-effect="non-scaling-stroke" stroke="black" stroke-width="8" stroke-linejoin="round" stroke-dasharray="2 8"/>
+<defs>
+<radialGradient id="paint0_radial_3_253" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(86 84) rotate(90) scale(38)">
+<stop stop-color="#FF22CF"/>
+<stop offset="1" stop-color="#FF22CF" stop-opacity="0"/>
+</radialGradient>
+</defs>
 </svg>
