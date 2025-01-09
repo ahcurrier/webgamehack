@@ -25,18 +25,15 @@ const Followers = ({ bubblePositions }: Props) => {
   const [followers, setFollowers] = useState<Follower[]>(() =>
     Array.from({ length: 5 }, (_, i) => ({
       id: i,
-      size: Math.random() * 30 + 20,
-      opacity: Math.random() * 0.5 + 0.2,
-      delay: i * 0.2,
-      position: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      size: Math.max(30 - i * 3, 15),
+      opacity: Math.max(0.8 - i * 0.1, 0.3),
+      delay: i * 0.1,
+      position: { x: 0, y: 0 },
       isStuck: false,
     }))
   );
   const [angle, setAngle] = useState(0);
-  const targetRef = useRef({
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-  });
+  const targetRef = useRef({ x: 0, y: 0 });
 
   const checkCollision = (follower: Follower, bubble: BubblePosition) => {
     const dx = follower.position.x - bubble.x;
@@ -47,30 +44,36 @@ const Followers = ({ bubblePositions }: Props) => {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      targetRef.current = { x: e.clientX, y: e.clientY };
+      targetRef.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
     };
 
+    let animationFrameId: number;
     const updatePositions = () => {
       setFollowers((prevFollowers) =>
-        prevFollowers.map((follower) => {
-          if (follower.isStuck) return follower;
+        prevFollowers.map((follower, index) => {
+          if (follower.isStuck && follower.stuckTo) return follower;
 
+          const target = index === 0 
+            ? targetRef.current 
+            : prevFollowers[index - 1].position;
+
+          const speed = 0.15 - (index * 0.02);
+          
           const newPos = {
-            x:
-              follower.position.x +
-              (targetRef.current.x - follower.position.x) * 0.1,
-            y:
-              follower.position.y +
-              (targetRef.current.y - follower.position.y) * 0.1,
+            x: follower.position.x + (target.x - follower.position.x) * speed,
+            y: follower.position.y + (target.y - follower.position.y) * speed,
           };
 
-          // Check collisions with bubbles
           for (const bubble of bubblePositions) {
             if (checkCollision({ ...follower, position: newPos }, bubble)) {
               return {
                 ...follower,
                 isStuck: true,
                 stuckTo: { x: bubble.x, y: bubble.y },
+                position: newPos,
               };
             }
           }
@@ -84,29 +87,34 @@ const Followers = ({ bubblePositions }: Props) => {
           return { ...follower, position: newPos };
         })
       );
-      requestAnimationFrame(updatePositions);
+      animationFrameId = requestAnimationFrame(updatePositions);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    requestAnimationFrame(updatePositions);
+    animationFrameId = requestAnimationFrame(updatePositions);
 
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [bubblePositions]);
 
   return (
-    <>
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
       {followers.map((follower) => (
         <img
           key={follower.id}
           src={cursor}
           alt="cursor"
           style={{
-            position: "fixed",
-            left: follower.isStuck
-              ? follower.stuckTo!.x
+            position: "absolute",
+            left: follower.isStuck && follower.stuckTo
+              ? follower.stuckTo.x - follower.size / 2
               : follower.position.x - follower.size / 2,
-            top: follower.isStuck
-              ? follower.stuckTo!.y
+            top: follower.isStuck && follower.stuckTo
+              ? follower.stuckTo.y - follower.size / 2
               : follower.position.y - follower.size / 2,
             width: follower.size,
             height: follower.size,
@@ -115,11 +123,12 @@ const Followers = ({ bubblePositions }: Props) => {
             opacity: follower.opacity,
             transition: follower.isStuck
               ? "none"
-              : `all ${0.1 + follower.delay}s ease`,
+              : `transform ${0.1 + follower.delay}s ease`,
+            zIndex: 1000,
           }}
         />
       ))}
-    </>
+    </div>
   );
 };
 

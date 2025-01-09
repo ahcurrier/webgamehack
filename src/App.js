@@ -1,18 +1,30 @@
 import "./App.css";
 import Bubble from "./bubble";
 import Followers from "./followers";
+import { useState, useEffect } from "react";
 
 function App() {
-  const bubbles = [
-    { x: 100, y: 100, size: 80 },
-    { x: 300, y: 200, size: 120 },
-    { x: 900, y: 600, size: 400 },
-    { x: 500, y: 700, size: 500 },
-    // Add more bubbles as needed
-  ];
+  const [bubbles, setBubbles] = useState([]);
+
+  useEffect(() => {
+    const updateBubbles = () => {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      setBubbles([
+        { x: viewportWidth * 0.2, y: viewportHeight * 0.2, size: 80 },
+        { x: viewportWidth * 0.4, y: viewportHeight * 0.3, size: 120 },
+      ]);
+    };
+
+    updateBubbles();
+    window.addEventListener('resize', updateBubbles);
+    
+    return () => window.removeEventListener('resize', updateBubbles);
+  }, []);
 
   return (
-    <div>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
       {bubbles.map((bubble, i) => (
         <Bubble key={i} {...bubble} />
       ))}
