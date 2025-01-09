@@ -1,18 +1,23 @@
 import "./App.css";
 import Bubble from "./bubble";
-import Follower from "./follower";
+import Followers from "./followers";
 
 function App() {
+  const bubbles = [
+    { x: 100, y: 100, size: 80 },
+    { x: 300, y: 200, size: 120 },
+    { x: 900, y: 600, size: 400 },
+    { x: 500, y: 700, size: 500 },
+    // Add more bubbles as needed
+  ];
+
   return (
-    <div className="App">
-      <Follower />
-      <Bubble x={100} y={100} size={80} />
-      <Bubble x={300} y={200} size={120} />
-      <header className="App-header h-[3000px] bg-blue-500 border border-4 border-white">
-        thing
-      </header>
+    <div>
+      {bubbles.map((bubble, i) => (
+        <Bubble key={i} {...bubble} />
+      ))}
+      <Followers bubblePositions={bubbles} />
     </div>
   );
 }
-
 export default App;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import bubble from "./bubble.svg";
+import bubble from "./bubble2.svg";
 
 interface BubbleProps {
   x: number;
