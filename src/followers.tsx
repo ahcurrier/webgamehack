@@ -7,8 +7,10 @@ interface Follower {
   opacity: number;
   delay: number;
   position: { x: number; y: number };
-  isStuck: boolean;
-  stuckTo?: { x: number; y: number };
+  state: 'trailing' | 'wandering';
+  wanderAngle?: number;
+  wanderSpeed?: number;
+  bubbleId?: number;
 }
 
 interface BubblePosition {
@@ -32,56 +34,59 @@ interface Props {
   stationaryOrbs: StationaryOrb[];
   onOrbCollected: (orbId: number) => void;
   followingCount: number;
+  onBubbleCollision: (bubbleId: number) => void;
 }
 
-const Followers = ({ bubblePositions, stationaryOrbs, onOrbCollected, followingCount }: Props) => {
-  const [followers, setFollowers] = useState<Follower[]>(() =>
+const Followers = ({ bubblePositions, stationaryOrbs, onOrbCollected, followingCount, onBubbleCollision }: Props) => {
+  const [trailingOrbs, setTrailingOrbs] = useState<Follower[]>(() => 
     Array.from({ length: 1 }, (_, i) => ({
       id: i,
       size: 20,
       opacity: 0.8,
       delay: i * 0.1,
       position: { x: 0, y: 0 },
-      isStuck: false,
+      state: 'trailing',
+      wanderAngle: Math.random() * Math.PI * 2,
+      wanderSpeed: 1 + Math.random() * 2,
     }))
   );
-  const [angle, setAngle] = useState(0);
+  const [wanderingOrbs, setWanderingOrbs] = useState<Follower[]>([]);
+  const [nextId, setNextId] = useState(1); // Track next available ID
   const targetRef = useRef({ x: 0, y: 0 });
   const lastPositions = useRef<Array<{x: number, y: number}>>([]);
+  const [angle, setAngle] = useState(0);
+  const pendingBubbleCollision = useRef<{bubbleId: number, orb: Follower} | null>(null);
+
+  // Handle pending bubble collisions
+  useEffect(() => {
+    if (pendingBubbleCollision.current) {
+      const { bubbleId, orb } = pendingBubbleCollision.current;
+      setWanderingOrbs(prev => [...prev, orb]);
+      onBubbleCollision(bubbleId);
+      pendingBubbleCollision.current = null;
+    }
+  });
 
   // Update followers count when new orbs are collected
   useEffect(() => {
-    if (followingCount > followers.length) {
-      setFollowers(prev => [
+    const totalOrbs = trailingOrbs.length + wanderingOrbs.length;
+    if (followingCount > totalOrbs) {
+      setTrailingOrbs(prev => [
         ...prev,
         {
-          id: prev.length,
+          id: nextId,
           size: 20,
           opacity: 0.8 - (prev.length * 0.1),
           delay: prev.length * 0.1,
           position: prev[prev.length - 1]?.position || targetRef.current,
-          isStuck: false,
+          state: 'trailing',
+          wanderAngle: Math.random() * Math.PI * 2,
+          wanderSpeed: 1 + Math.random() * 2,
         }
       ]);
+      setNextId(id => id + 1);
     }
-  }, [followingCount]);
-
-  const checkCollision = (position: { x: number, y: number }, target: { x: number, y: number, size: number }) => {
-    const dx = position.x - target.x;
-    const dy = position.y - target.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    return distance < target.size / 2 + 10; // 10 is half the orb size
-  };
-
-  const checkStationaryCollisions = (position: { x: number, y: number }) => {
-    for (const orb of stationaryOrbs) {
-      if (!orb.collected && checkCollision(position, { ...orb, size: 20 })) {
-        onOrbCollected(orb.id);
-        return true;
-      }
-    }
-    return false;
-  };
+  }, [followingCount, wanderingOrbs.length]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -90,93 +95,101 @@ const Followers = ({ bubblePositions, stationaryOrbs, onOrbCollected, followingC
         y: e.clientY
       };
       
-      // Check for collisions even when no followers
-      if (followers.length === 0) {
-        checkStationaryCollisions(targetRef.current);
+      // Check for collisions with stationary orbs
+      for (const orb of stationaryOrbs) {
+        if (!orb.collected && checkCollision(targetRef.current, { ...orb, size: 20 })) {
+          onOrbCollected(orb.id);
+          break;
+        }
       }
     };
 
     let animationFrameId: number;
     const updatePositions = () => {
-      setFollowers((prevFollowers) => {
-        // First, check for bubble collisions with any follower
+      // First, check for bubble collisions with trailing orbs
+      setTrailingOrbs(prevTrailing => {
         for (const bubble of bubblePositions) {
           const availableSpace = bubble.capacity - bubble.count;
           if (availableSpace <= 0) continue;
 
-          // Check if any follower collides with this bubble
-          const collidingFollower = prevFollowers.find(follower => 
-            !follower.isStuck && checkCollision(follower.position, bubble)
+          // Check if any trailing orb collides with this bubble
+          const collidingOrb = prevTrailing.find(orb => 
+            checkCollision(orb.position, bubble)
           );
 
-          if (collidingFollower) {
-            // Calculate entry point on bubble circumference
-            const dx = collidingFollower.position.x - bubble.x;
-            const dy = collidingFollower.position.y - bubble.y;
-            const angle = Math.atan2(dy, dx);
-            const radius = bubble.size / 2;
-            const entryPoint = {
-              x: bubble.x + Math.cos(angle) * radius,
-              y: bubble.y + Math.sin(angle) * radius
-            };
-
-            // If there's a collision, stick as many free orbs as possible into the bubble
-            const freeFollowers = prevFollowers.filter(f => !f.isStuck);
-            const orbsToStick = Math.min(freeFollowers.length, availableSpace);
-            
-            const updatedFollowers = prevFollowers.map((follower, index) => {
-              if (follower.isStuck) return follower;
-              
-              // Only stick the first orbsToStick followers
-              if (freeFollowers.indexOf(follower) < orbsToStick) {
-                return {
-                  ...follower,
-                  isStuck: true,
-                  stuckTo: entryPoint,
-                  position: entryPoint,
-                };
+          if (collidingOrb) {
+            // Schedule the orb transfer for next effect
+            pendingBubbleCollision.current = {
+              bubbleId: bubble.id,
+              orb: {
+                ...collidingOrb,
+                state: 'wandering' as const,
+                bubbleId: bubble.id,
+                position: {
+                  x: bubble.x + (Math.random() - 0.5) * bubble.size * 0.8,
+                  y: bubble.y + Math.random() * bubble.size * 0.8
+                }
               }
-              return follower;
-            });
-
-            // Update bubble count
-            bubble.count += orbsToStick;
+            };
             
-            return updatedFollowers;
+            // Remove only the colliding orb from trailing
+            return prevTrailing.filter(orb => orb.id !== collidingOrb.id);
           }
         }
 
-        // If no bubble collisions, update positions normally
-        return prevFollowers.map((follower, index) => {
-          if (follower.isStuck) return follower;
-
+        // If no collisions, update trailing orb positions
+        return prevTrailing.map((orb, index) => {
           const target = index === 0 
             ? targetRef.current 
             : lastPositions.current[index - 1] || targetRef.current;
 
           const newPos = {
-            x: follower.position.x + (target.x - follower.position.x) * (0.15 - (index * 0.02)),
-            y: follower.position.y + (target.y - follower.position.y) * (0.15 - (index * 0.02)),
+            x: orb.position.x + (target.x - orb.position.x) * (0.15 - (index * 0.02)),
+            y: orb.position.y + (target.y - orb.position.y) * (0.15 - (index * 0.02))
           };
 
-          // Store the current position for the next follower to follow
           if (!lastPositions.current[index]) {
             lastPositions.current[index] = { x: 0, y: 0 };
           }
           lastPositions.current[index] = newPos;
 
-          // Check collisions with stationary orbs
-          checkStationaryCollisions(newPos);
-
-          const dx = newPos.x - follower.position.x;
-          const dy = newPos.y - follower.position.y;
-          if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-            setAngle(Math.atan2(dy, dx) * (180 / Math.PI));
-          }
-
-          return { ...follower, position: newPos };
+          return { ...orb, position: newPos };
         });
       });
+
+      // Update wandering orb positions
+      setWanderingOrbs(prevWandering => 
+        prevWandering.map(orb => {
+          const bubble = bubblePositions.find(b => b.id === orb.bubbleId);
+          if (!bubble) return orb;
+
+          const wanderAngle = (orb.wanderAngle || 0) + (Math.random() - 0.5) * 0.1;
+          const speed = (orb.wanderSpeed || 1) * 0.8;
+          
+          let newX = orb.position.x + Math.cos(wanderAngle) * speed;
+          let newY = orb.position.y + Math.sin(wanderAngle) * speed;
+          
+          const dx = newX - bubble.x;
+          const dy = newY - bubble.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const maxRadius = (bubble.size / 2) * 0.8;
+          
+          if (distance > maxRadius) {
+            const angle = Math.atan2(dy, dx);
+            newX = bubble.x + Math.cos(angle) * maxRadius;
+            newY = bubble.y + Math.sin(angle) * maxRadius;
+            orb.wanderAngle = angle + Math.PI + (Math.random() - 0.5) * 0.5;
+          } else {
+            orb.wanderAngle = wanderAngle;
+          }
+          
+          return {
+            ...orb,
+            position: { x: newX, y: newY }
+          };
+        })
+      );
+
       animationFrameId = requestAnimationFrame(updatePositions);
     };
 
@@ -189,31 +202,32 @@ const Followers = ({ bubblePositions, stationaryOrbs, onOrbCollected, followingC
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [bubblePositions, stationaryOrbs, onOrbCollected, followers.length]);
+  }, [bubblePositions, stationaryOrbs, onOrbCollected, onBubbleCollision]);
+
+  const checkCollision = (position: { x: number, y: number }, target: { x: number, y: number, size: number }) => {
+    const dx = position.x - target.x;
+    const dy = position.y - target.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < target.size / 2 + 10; // 10 is half the orb size
+  };
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-      {followers.map((follower) => (
+      {[...trailingOrbs, ...wanderingOrbs].map((orb) => (
         <img
-          key={follower.id}
+          key={`orb-${orb.id}-${orb.state}`}
           src={cursor}
           alt="cursor"
           style={{
             position: "absolute",
-            left: follower.isStuck && follower.stuckTo
-              ? follower.stuckTo.x - follower.size / 2
-              : follower.position.x - follower.size / 2,
-            top: follower.isStuck && follower.stuckTo
-              ? follower.stuckTo.y - follower.size / 2
-              : follower.position.y - follower.size / 2,
-            width: follower.size,
-            height: follower.size,
+            left: orb.position.x - orb.size / 2,
+            top: orb.position.y - orb.size / 2,
+            width: orb.size,
+            height: orb.size,
             pointerEvents: "none",
             transform: `rotate(${angle + 90}deg)`,
-            opacity: follower.opacity,
-            transition: follower.isStuck
-              ? "none"
-              : `transform ${0.1 + follower.delay}s ease`,
+            opacity: orb.opacity,
+            transition: orb.state === 'trailing' ? `transform ${0.1 + orb.delay}s ease` : 'none',
             zIndex: 1000,
           }}
         />
